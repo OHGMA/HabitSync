@@ -20,6 +20,18 @@ class AuthViewModel : ViewModel() {
             if (email.isNotEmpty() && password.isNotEmpty()) {
                 _authState.value = Resource.Success("Success")
             } else {
+                _authState.value = Resource.Error("All fields must be filled")
+            }
+        }
+    }
+
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            _authState.value = Resource.Loading
+            delay(2000)
+            if (email.isNotEmpty() && password.isNotEmpty()) {
+                _authState.value = Resource.Success("Success")
+            } else {
                 _authState.value = Resource.Error("Email and Password cannot be empty")
             }
         }
