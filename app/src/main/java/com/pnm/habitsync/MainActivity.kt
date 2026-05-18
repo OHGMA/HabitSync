@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.pnm.habitsync.ui.screens.MainScreen
 import com.pnm.habitsync.ui.theme.HabitSyncTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,14 +19,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            HabitSyncTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            // We will add the theme later, for now just call MainScreen
+            MainScreen()
         }
     }
 }
