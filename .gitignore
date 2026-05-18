@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+Documentation.md
+google-services.json
