@@ -34,6 +34,7 @@ fun RootNavigation() {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val feedDao = database.feedDao()
+    val habitDao = database.habitDao()
     val profileDao = database.profileDao()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -72,6 +73,7 @@ fun RootNavigation() {
             MainScreen(
                 feedDao = feedDao,
                 profileDao = profileDao,
+                habitDao = habitDao,
                 appDatabase = database, // Pass the database instance
                 onLogoutRequest = {
                     // Navigate back to the Auth screen and destroy the Main screen history

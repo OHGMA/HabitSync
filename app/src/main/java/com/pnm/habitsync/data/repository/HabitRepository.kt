@@ -1,16 +1,49 @@
 package com.pnm.habitsync.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.pnm.habitsync.data.local.HabitDao
 import com.pnm.habitsync.data.model.Habit
 import com.pnm.habitsync.utils.Resource
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class HabitRepository(
+    private val habitDao: HabitDao,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: DatabaseReference = FirebaseDatabase.getInstance().reference
 ) {
+    val localHabits: Flow<List<Habit>> = habitDao.getAllHabits()
+
+    fun startRealtimeSync() {
+        val uid = auth.currentUser?.uid ?: return
+
+        db.child("habits").orderByChild("userId").equalTo(uid)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val habitsList = mutableListOf<Habit>()
+                    for (child in snapshot.children) {
+                        child.getValue(Habit::class.java)?.let { habitsList.add(it) }
+                    }
+
+                    // Save Firebase data straight into the local database!
+                    // This automatically triggers `localHabits` above and updates the UI!
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        habitDao.insertHabits(habitsList)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    // Handle error if needed
+                }
+            })
+    }
+
     // Helper to get the currently logged-in user's ID
     private val currentUserId: String?
         get() = auth.currentUser?.uid
@@ -89,31 +122,17 @@ class HabitRepository(
         }
 
         return try {
-            // 3. Update the habit streak
+            // 3. Create a map of only the fields we want to update
             val updates = mapOf<String, Any>(
                 "streakCount" to newStreak,
                 "lastCompletedDate" to today
             )
+
+            // 4. Send the update to Firebase
+            // Path: habits/{habitId}
             db.child("habits").child(habit.id).updateChildren(updates).await()
 
-            // ==========================================
-            // NEW: PUBLISH TO THE GLOBAL SOCIAL FEED!
-            // ==========================================
-            // First, quickly grab the user's username from the database
-            val userSnapshot = db.child("users").child(uid).get().await()
-            val username = userSnapshot.child("username").getValue(String::class.java) ?: "Someone"
-
-            // Then, push the activity to the global "feed_activity" node
-            val feedRef = db.child("feed_activity").push()
-            val feedData = mapOf(
-                "username" to username,
-                "habitTitle" to habit.title,
-                "status" to "completed a habit",
-                "timestamp" to System.currentTimeMillis(),
-                "isDone" to true
-            )
-            feedRef.setValue(feedData).await()
-            // ==========================================
+            // NOTE: For the Social Feed later, we would also add to "feed_activity" here!
 
             Resource.Success(true)
         } catch (e: Exception) {

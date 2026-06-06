@@ -15,18 +15,23 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pnm.habitsync.data.local.AppDatabase
 import com.pnm.habitsync.data.local.FeedDao
+import com.pnm.habitsync.data.local.HabitDao
 import com.pnm.habitsync.data.local.ProfileDao
 import com.pnm.habitsync.data.repository.FeedRepository
+import com.pnm.habitsync.data.repository.HabitRepository
 import com.pnm.habitsync.data.repository.ProfileRepository
 import com.pnm.habitsync.navigation.Screen
 import com.pnm.habitsync.viewmodel.FeedViewModel
+import com.pnm.habitsync.viewmodel.HabitViewModel
 import com.pnm.habitsync.viewmodel.ProfileViewModel
 
 @Composable
-fun MainScreen(feedDao: FeedDao,
-               appDatabase: AppDatabase, // NEW: Needed to clear cache on logout
-               profileDao: ProfileDao,
-               onLogoutRequest: () -> Unit // NEW: Tells RootNavigation to go to AuthScreen
+fun MainScreen(
+    feedDao: FeedDao,
+    habitDao: HabitDao,
+    profileDao: ProfileDao,
+    appDatabase: AppDatabase,
+    onLogoutRequest: () -> Unit
 ) { // <- Accept the DAO from MainActivity
     val navController = rememberNavController()
     val items = listOf(Screen.Home, Screen.Habits, Screen.Profile)
@@ -81,8 +86,41 @@ fun MainScreen(feedDao: FeedDao,
 
             // HABITS SCREEN
             composable(Screen.Habits.route) {
+                val habitViewModel: HabitViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            // Pass the habitDao to the Repository
+                            val repo = HabitRepository(habitDao)
+                            return HabitViewModel(repo) as T
+                        }
+                    }
+                )
+
                 HabitsScreen(
+                    viewModel = habitViewModel,
                     onCreateHabitClick = { navController.navigate(Screen.CreateHabit.route) }
+                )
+            }
+
+            // CREATE HABIT SCREEN
+            composable(Screen.CreateHabit.route) {
+                // 1. Build the ViewModel using the Factory so it gets the DAO
+                val habitViewModel: HabitViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            val repo = HabitRepository(habitDao)
+                            return HabitViewModel(repo) as T
+                        }
+                    }
+                )
+
+                // 2. Pass the built ViewModel directly into the screen
+                CreateHabitScreen(
+                    viewModel = habitViewModel,
+                    onBack = { navController.popBackStack() },
+                    onHabitCreated = { navController.popBackStack() }
                 )
             }
 
@@ -91,10 +129,7 @@ fun MainScreen(feedDao: FeedDao,
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            val repo = ProfileRepository(
-                                appDatabase = appDatabase,
-                                profileDao = profileDao
-                            )
+                            val repo = ProfileRepository(appDatabase = appDatabase, profileDao = profileDao)
                             return ProfileViewModel(repo) as T
                         }
                     }
@@ -103,14 +138,6 @@ fun MainScreen(feedDao: FeedDao,
                 ProfileScreen(
                     viewModel = profileViewModel,
                     onLogoutClick = { onLogoutRequest() }
-                )
-            }
-
-            // CREATE HABIT SCREEN
-            composable(Screen.CreateHabit.route) {
-                CreateHabitScreen(
-                    onBack = { navController.popBackStack() },
-                    onHabitCreated = { navController.popBackStack() }
                 )
             }
         }

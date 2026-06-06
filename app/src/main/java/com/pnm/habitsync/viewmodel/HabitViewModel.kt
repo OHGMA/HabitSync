@@ -6,17 +6,25 @@ import com.pnm.habitsync.data.model.Habit
 import com.pnm.habitsync.data.repository.HabitRepository
 import com.pnm.habitsync.utils.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class HabitViewModel(
-    private val repository: HabitRepository = HabitRepository()
+    private val repository: HabitRepository
 ) : ViewModel() {
+
+    // Automatically convert Room's Flow into Compose State
+    val habits = repository.localHabits.stateIn(
+        scope = viewModelScope,
+        started = WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     // State for the list of habits
     private val _habits = MutableStateFlow<List<Habit>>(emptyList())
-    val habits: StateFlow<List<Habit>> = _habits.asStateFlow()
 
     // State for loading/errors (useful for showing spinners or snackbars)
     private val _isLoading = MutableStateFlow(false)
@@ -26,8 +34,8 @@ class HabitViewModel(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
-        // Automatically fetch habits when this ViewModel is created
-        loadHabits()
+        // Turn on the Firebase "background pipe" when the screen opens
+        repository.startRealtimeSync()
     }
 
     /**
@@ -97,9 +105,5 @@ class HabitViewModel(
                 else -> {}
             }
         }
-    }
-
-    fun clearError() {
-        _errorMessage.value = null
     }
 }
