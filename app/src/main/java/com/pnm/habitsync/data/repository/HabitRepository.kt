@@ -89,17 +89,31 @@ class HabitRepository(
         }
 
         return try {
-            // 3. Create a map of only the fields we want to update
+            // 3. Update the habit streak
             val updates = mapOf<String, Any>(
                 "streakCount" to newStreak,
                 "lastCompletedDate" to today
             )
-
-            // 4. Send the update to Firebase
-            // Path: habits/{habitId}
             db.child("habits").child(habit.id).updateChildren(updates).await()
 
-            // NOTE: For the Social Feed later, we would also add to "feed_activity" here!
+            // ==========================================
+            // NEW: PUBLISH TO THE GLOBAL SOCIAL FEED!
+            // ==========================================
+            // First, quickly grab the user's username from the database
+            val userSnapshot = db.child("users").child(uid).get().await()
+            val username = userSnapshot.child("username").getValue(String::class.java) ?: "Someone"
+
+            // Then, push the activity to the global "feed_activity" node
+            val feedRef = db.child("feed_activity").push()
+            val feedData = mapOf(
+                "username" to username,
+                "habitTitle" to habit.title,
+                "status" to "completed a habit",
+                "timestamp" to System.currentTimeMillis(),
+                "isDone" to true
+            )
+            feedRef.setValue(feedData).await()
+            // ==========================================
 
             Resource.Success(true)
         } catch (e: Exception) {
