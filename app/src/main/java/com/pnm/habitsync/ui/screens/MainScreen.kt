@@ -18,7 +18,7 @@ fun MainScreen() {
     val navController = rememberNavController()
 
     // Put our screens in a list so we can loop through them for the bottom bar
-    val items = listOf(Screen.Home, Screen.Habits, Screen.Alerts, Screen.Profile)
+    val items = listOf(Screen.Home, Screen.Habits, Screen.Profile)
 
     Scaffold(
         bottomBar = {
@@ -60,7 +60,6 @@ fun MainScreen() {
         ) {
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Habits.route) { HabitsScreen() }
-            composable(Screen.Alerts.route) { AlertsScreen() }
             composable(Screen.Profile.route) { ProfileScreen() }
         }
     }
