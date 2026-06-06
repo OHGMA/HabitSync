@@ -1,9 +1,14 @@
 package com.pnm.habitsync // Adjust this!
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,6 +34,23 @@ fun RootNavigation() {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val feedDao = database.feedDao()
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { isGranted ->
+                if (isGranted) {
+                    println("Notification permission granted!")
+                } else {
+                    println("Notification permission denied!")
+                }
+            }
+        )
+
+        LaunchedEffect(Unit) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     // This NavHost sits above everything else in the app.
     NavHost(navController = rootNavController, startDestination = "auth") {
