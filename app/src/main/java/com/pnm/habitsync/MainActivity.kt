@@ -1,42 +1,46 @@
-package com.pnm.habitsync
+package com.pnm.habitsync // Adjust this!
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.pnm.habitsync.ui.screens.AuthScreen
 import com.pnm.habitsync.ui.screens.MainScreen
-import com.pnm.habitsync.ui.theme.HabitSyncTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            // We will add the theme later, for now just call MainScreen
-            MainScreen()
+            RootNavigation()
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun RootNavigation() {
+    val rootNavController = rememberNavController()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    HabitSyncTheme {
-        Greeting("Android")
+    // This NavHost sits above everything else in the app.
+    NavHost(navController = rootNavController, startDestination = "auth") {
+
+        composable("auth") {
+            AuthScreen(
+                onAuthSuccess = {
+                    // When login succeeds, go to "main" and destroy the "auth" screen
+                    // so the user can't press back to go to the login screen.
+                    rootNavController.navigate("main") {
+                        popUpTo("auth") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable("main") {
+            // This is the file we made in Phase 2 with the Bottom Navigation!
+            MainScreen()
+        }
     }
 }
