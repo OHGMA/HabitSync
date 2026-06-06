@@ -13,13 +13,21 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.pnm.habitsync.data.local.AppDatabase
 import com.pnm.habitsync.data.local.FeedDao
+import com.pnm.habitsync.data.local.ProfileDao
 import com.pnm.habitsync.data.repository.FeedRepository
+import com.pnm.habitsync.data.repository.ProfileRepository
 import com.pnm.habitsync.navigation.Screen
 import com.pnm.habitsync.viewmodel.FeedViewModel
+import com.pnm.habitsync.viewmodel.ProfileViewModel
 
 @Composable
-fun MainScreen(feedDao: FeedDao) { // <- Accept the DAO from MainActivity
+fun MainScreen(feedDao: FeedDao,
+               appDatabase: AppDatabase, // NEW: Needed to clear cache on logout
+               profileDao: ProfileDao,
+               onLogoutRequest: () -> Unit // NEW: Tells RootNavigation to go to AuthScreen
+) { // <- Accept the DAO from MainActivity
     val navController = rememberNavController()
     val items = listOf(Screen.Home, Screen.Habits, Screen.Profile)
 
@@ -78,7 +86,25 @@ fun MainScreen(feedDao: FeedDao) { // <- Accept the DAO from MainActivity
                 )
             }
 
-            composable(Screen.Profile.route) { ProfileScreen() }
+            composable(Screen.Profile.route) {
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            val repo = ProfileRepository(
+                                appDatabase = appDatabase,
+                                profileDao = profileDao
+                            )
+                            return ProfileViewModel(repo) as T
+                        }
+                    }
+                )
+
+                ProfileScreen(
+                    viewModel = profileViewModel,
+                    onLogoutClick = { onLogoutRequest() }
+                )
+            }
 
             // CREATE HABIT SCREEN
             composable(Screen.CreateHabit.route) {

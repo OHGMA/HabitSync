@@ -34,6 +34,7 @@ fun RootNavigation() {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val feedDao = database.feedDao()
+    val profileDao = database.profileDao()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val permissionLauncher = rememberLauncherForActivityResult(
@@ -68,8 +69,17 @@ fun RootNavigation() {
         }
 
         composable("main") {
-            // This is the file we made in Phase 2 with the Bottom Navigation!
-            MainScreen(feedDao = feedDao)
+            MainScreen(
+                feedDao = feedDao,
+                profileDao = profileDao,
+                appDatabase = database, // Pass the database instance
+                onLogoutRequest = {
+                    // Navigate back to the Auth screen and destroy the Main screen history
+                    rootNavController.navigate("auth") {
+                        popUpTo("main") { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

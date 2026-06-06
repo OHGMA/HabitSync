@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.pnm.habitsync.data.model.UserProfile
 
 // Version number must increase if you ever change the variables in FeedEntity later!
-@Database(entities = [FeedEntity::class], version = 1, exportSchema = false)
+@Database(entities = [FeedEntity::class, UserProfile::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun feedDao(): FeedDao
+    abstract fun profileDao(): ProfileDao
 
     companion object {
         // Volatile ensures that any changes to this variable are immediately visible to other threads
