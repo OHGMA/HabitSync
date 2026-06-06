@@ -56,11 +56,28 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding) // Important: Prevents content from going under the bottom bar
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Home.route) { HomeScreen() }
-            composable(Screen.Habits.route) { HabitsScreen() }
+
+            composable(Screen.Habits.route) {
+                HabitsScreen(
+                    onCreateHabitClick = {
+                        // Tell the NavController to go to the Create screen
+                        navController.navigate(Screen.CreateHabit.route)
+                    }
+                )
+            }
+
             composable(Screen.Profile.route) { ProfileScreen() }
+
+            // NEW: The Create Habit Screen Route
+            composable(Screen.CreateHabit.route) {
+                CreateHabitScreen(
+                    onBack = { navController.popBackStack() }, // Pop off the backstack to return
+                    onHabitCreated = { navController.popBackStack() } // Return when successful
+                )
+            }
         }
     }
 }
