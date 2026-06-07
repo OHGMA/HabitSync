@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pnm.habitsync.data.model.Habit
 import com.pnm.habitsync.data.repository.HabitRepository
+import com.pnm.habitsync.utils.DateUtils
 import com.pnm.habitsync.utils.Resource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
@@ -16,17 +18,13 @@ class HabitViewModel(
     private val repository: HabitRepository
 ) : ViewModel() {
 
-    // Automatically convert Room's Flow into Compose State
+    // 1. SINGLE SOURCE OF TRUTH: Automatically convert Room's Flow into Compose State
     val habits = repository.localHabits.stateIn(
         scope = viewModelScope,
         started = WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    // State for the list of habits
-    private val _habits = MutableStateFlow<List<Habit>>(emptyList())
-
-    // State for loading/errors (useful for showing spinners or snackbars)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -34,31 +32,45 @@ class HabitViewModel(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
-        // Turn on the Firebase "background pipe" when the screen opens
+        // 2. Turn on the Firebase "background pipe" when the screen opens
         repository.startRealtimeSync()
-    }
 
-    /**
-     * Asks the repository for habits and updates the StateFlow
-     */
-    fun loadHabits() {
+        // 3. SILENT CLEANER: Watch the local Room data and clean up dead streaks automatically
         viewModelScope.launch {
-            _isLoading.value = true
-            when (val result = repository.getMyHabits()) {
-                is Resource.Success -> {
-                    _habits.value = result.data
-                }
-                is Resource.Error -> {
-                    _errorMessage.value = result.message
-                }
-                else -> {}
+            repository.localHabits.collect { currentHabits ->
+                resetStreaks(currentHabits)
             }
-            _isLoading.value = false
         }
     }
 
     /**
-     * Creates a new habit and refreshes the list
+     * Checks if a user missed a day. If they did, it silently resets the streak to 0.
+     */
+    private fun resetStreaks(habitsList: List<Habit>) {
+        val today = DateUtils.getTodayString()
+        val yesterday = DateUtils.getYesterdayString()
+
+        for (habit in habitsList) {
+            // If the habit wasn't done today AND wasn't done yesterday, the streak is broken.
+            // We check streakCount > 0 so we don't accidentally cause an infinite update loop!
+            if (habit.lastCompletedDate.isNotEmpty() &&
+                habit.lastCompletedDate != today &&
+                habit.lastCompletedDate != yesterday &&
+                habit.streakCount > 0) {
+
+                val brokenHabit = habit.copy(streakCount = 0)
+
+                // Update silently in the background
+                viewModelScope.launch(Dispatchers.IO) {
+                    repository.updateHabit(brokenHabit)
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates a new habit.
+     * (We don't need to manually refresh anymore; Room will do it automatically!)
      */
     fun createHabit(title: String, description: String, category: String, isPublic: Boolean, onSuccess: () -> Unit) {
         if (title.isBlank()) {
@@ -71,14 +83,8 @@ class HabitViewModel(
             val result = repository.createHabit(title, description, category, isPublic)
 
             when (result) {
-                is Resource.Success -> {
-                    // Refresh the list from Firebase so the new habit appears
-                    loadHabits()
-                    onSuccess() // Tell the UI to navigate back or close the bottom sheet
-                }
-                is Resource.Error -> {
-                    _errorMessage.value = result.message
-                }
+                is Resource.Success -> onSuccess()
+                is Resource.Error -> _errorMessage.value = result.message
                 else -> {}
             }
             _isLoading.value = false
@@ -86,24 +92,32 @@ class HabitViewModel(
     }
 
     /**
-     * Called when the user taps the habit item to complete it
+     * Called when the user taps the habit item to complete it.
+     * Evaluates if the streak should grow, or reset to 1.
      */
     fun completeHabit(habit: Habit) {
-        viewModelScope.launch {
-            // We don't show a big loading spinner for this, it should feel instant
-            val result = repository.markHabitCompleted(habit)
+        val today = DateUtils.getTodayString()
+        val yesterday = DateUtils.getYesterdayString()
 
-            when (result) {
-                is Resource.Success -> {
-                    // Refreshes the list from Firebase so the UI instantly shows the new Streak and Checkmark!
-                    loadHabits()
-                }
-                is Resource.Error -> {
-                    // We can optionally show a toast here if they already completed it
-                    _errorMessage.value = result.message
-                }
-                else -> {}
-            }
+        // Prevent double-clicking if they already did it today
+        if (habit.lastCompletedDate == today) return
+
+        // Evaluate the strict streak math
+        val newStreak = if (habit.lastCompletedDate == yesterday) {
+            habit.streakCount + 1 // They did it yesterday! Keep the fire burning.
+        } else {
+            1 // They missed yesterday. Start over at 1.
+        }
+
+        // Package the new data
+        val updatedHabit = habit.copy(
+            lastCompletedDate = today,
+            streakCount = newStreak
+        )
+
+        // Send to repository (This updates Firebase AND Room automatically)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateHabit(updatedHabit)
         }
     }
 }

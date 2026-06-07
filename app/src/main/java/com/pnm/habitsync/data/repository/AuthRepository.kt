@@ -55,9 +55,4 @@ class AuthRepository(
             Resource.Error(e.message ?: "An error occurred during registration")
         }
     }
-
-    // 3. LOGOUT FUNCTION
-    fun logout() {
-        auth.signOut()
-    }
 }

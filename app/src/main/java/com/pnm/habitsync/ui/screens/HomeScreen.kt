@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pnm.habitsync.data.local.FeedEntity
 import com.pnm.habitsync.viewmodel.FeedViewModel
-
 @Composable
 fun HomeScreen(viewModel: FeedViewModel) {
     // Collect the feed data directly from the Room Database!
@@ -82,41 +81,76 @@ fun FeedCard(item: FeedEntity) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Name and Time
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.username, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-            // Removed the formatTimestamp helper and just use the status text!
-            Text(item.status, color = Color.Gray, fontSize = 14.sp)
-        }
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Avatar Placeholder
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE5E7EB)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = item.username.take(2).uppercase(),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                }
 
-        // Done or Missed Badge
-        if (item.isDone) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFD1FAE5)) // Light green
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Check, contentDescription = "Done", tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Done", color = Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Name and Time
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.username, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Text(item.status, color = Color.Gray, fontSize = 14.sp)
+                }
+
+                // Done Badge
+                if (item.isDone) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFD1FAE5)) // Light green
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Check, contentDescription = "Done", tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Done", color = Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                } else {
+                    // NEW: The Pink "Missed" badge from your design!
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFFFE4E6)) // Light red/pink
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Missed",
+                                tint = Color(0xFFE11D48),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "Missed",
+                                color = Color(0xFFE11D48),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
             }
-        } else {
-            // NEW: The Pink "Missed" badge from your design!
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFFFE4E6)) // Light red/pink
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Close, contentDescription = "Missed", tint = Color(0xFFE11D48), modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Missed", color = Color(0xFFE11D48), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Habit Action
+            Text(item.habitTitle, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
     }
 }

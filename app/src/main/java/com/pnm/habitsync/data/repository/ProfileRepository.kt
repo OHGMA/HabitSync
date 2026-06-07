@@ -36,10 +36,12 @@ class ProfileRepository(
                         try {
                             // Calculate Stats
                             val totalHabits = habitsSnapshot.childrenCount.toInt()
-                            var totalStreaks = 0
+                            var maxStreak = 0
                             for (habit in habitsSnapshot.children) {
                                 val streak = habit.child("streakCount").getValue(Int::class.java) ?: 0
-                                totalStreaks += streak
+                                if (streak > maxStreak) {
+                                    maxStreak = streak
+                                }
                             }
 
                             // Fetch Name & Email
@@ -53,7 +55,7 @@ class ProfileRepository(
                                 username = username,
                                 email = email,
                                 totalHabits = totalHabits,
-                                highestStreak = totalStreaks
+                                highestStreak = maxStreak
                             )
                             profileDao.insertProfile(updatedProfile)
 
