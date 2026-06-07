@@ -70,7 +70,7 @@ class ProfileRepository(
     }
 
     // Keep the logout function exactly the same!
-    suspend fun logout() {
+    fun logout() {
         auth.signOut()
         appDatabase.clearAllTables() // Extremely important for security
     }

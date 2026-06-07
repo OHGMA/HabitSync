@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,13 +28,6 @@ import com.pnm.habitsync.viewmodel.FeedViewModel
 fun HomeScreen(viewModel: FeedViewModel) {
     // Collect the feed data directly from the Room Database!
     val feedItems by viewModel.feed.collectAsState()
-
-    // ==========================================
-    // NEW: Sync with Firebase every time this screen appears!
-    // ==========================================
-    LaunchedEffect(Unit) {
-        viewModel.refreshFeed()
-    }
 
     Column(
         modifier = Modifier
