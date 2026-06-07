@@ -85,16 +85,4 @@ class AuthViewModel(
             }
         }
     }
-
-    fun logout() {
-        repository.logout()
-        _authState.value = AuthState.Idle
-    }
-
-    // Call this from the UI after showing an error popup/snackbar so it doesn't show twice
-    fun clearError() {
-        if (_authState.value is AuthState.Error) {
-            _authState.value = AuthState.Idle
-        }
-    }
 }
